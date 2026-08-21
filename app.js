@@ -832,7 +832,7 @@
       ctx.fillRect(x, y, w, w);
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize);
-      ctx.fillStyle = '#8b5cf6';
+      ctx.fillStyle = '#2563eb';
       ctx.fillRect(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize);
     }
 
