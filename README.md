@@ -113,4 +113,4 @@ For issues or questions, please open an issue on GitHub.
 
 ---
 
-Created by [Your Name]
+Created by [Adam Muhammad]
