@@ -54,20 +54,22 @@ The project now includes an **Interactive Web Studio** with a cyberpunk glassmor
 
 ### Launching the Web Interface:
 ```bash
-# Start the lightweight studio server (port 3000)
+# Start the real-time sync server (WebSockets + REST + UI on port 3000)
 python serve.py
 
 # Or open in browser directly
 python serve.py --open
 ```
 
-### Key Capabilities:
-- ⚡ **Universal Real-Time Mesh:** Instant transfer across browser tabs, simulated devices, and WebSocket backends (< 15ms latency).
-- 💻 **Multi-Device Simulation Studio:** Interactive device frames (MacBook Pro, iPhone 16 Pro, Alienware PC, ThinkPad Linux) for instant cross-device copy/paste demonstrations.
-- 🗄️ **Clipboard History Vault:** Tag-based categorization (URLs, Code, JSON, Colors, Plain Text), search, pinning, and JSON backup export.
-- 🔒 **Zero-Knowledge E2EE:** Client-side AES-GCM 256 encryption with PBKDF2 passphrase key derivation.
-- 📱 **QR Code Device Pairing:** Generate scannable pairing QR codes to easily connect mobile devices to your mesh.
-- 🔊 **Web Audio Synthesizer:** Real-time futuristic sound feedback for copy, sync, and pairing events.
+### Real-Time User & Device Synchronization:
+1. **Live WebSockets (`/sync` & `/ws`)**: High-performance, bi-directional real-time clipboard synchronization across all connected desktop and mobile browsers.
+2. **Local Area Network (LAN) Sync**: Connect any mobile phone or second computer on your local WiFi by opening the network URL (e.g. `http://192.168.x.x:3000`) or scanning the in-app pairing QR code.
+3. **REST API Sync Bridge**:
+   - `GET /api/clipboard`: Fetch current universal clipboard state.
+   - `POST /api/clipboard`: Broadcast new clip to all connected users in real time.
+   - `GET /api/devices`: Live connected client and device presence list.
+   - `GET /api/network-info`: Discover server LAN IP and pairing URLs.
+4. **Cross-Tab & System Sync**: Uses browser `BroadcastChannel` + native `navigator.clipboard` for instant multi-window sync.
 
 ## 🔐 Authentication Flow
 1. **Signup:** User registers via Email, Google, or Apple

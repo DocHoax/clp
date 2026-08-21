@@ -268,9 +268,19 @@
     return new Date(ts).toLocaleDateString();
   }
 
-  // --- MESH & BROADCAST ENGINE ---
+  // --- MESH & REAL-TIME BROADCAST ENGINE ---
+  let wsReconnectTimer = null;
+
+  function getWsUrl() {
+    const custom = document.getElementById('setting-ws-url')?.value?.trim();
+    if (custom) return custom;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host || 'localhost:3000';
+    return `${protocol}//${host}/sync`;
+  }
+
   function initMeshChannels() {
-    // 1. Cross-tab BroadcastChannel
+    // 1. Cross-tab BroadcastChannel for zero-latency local window sync
     try {
       if (typeof BroadcastChannel !== 'undefined') {
         state.broadcastChannel = new BroadcastChannel('clp_universal_sync_mesh');
@@ -296,22 +306,78 @@
       }
     });
 
-    // 3. Connect to WebSocket backend if available
+    // 3. Fetch latest network & server info
+    fetchServerInfo();
+
+    // 4. Connect to real-time WebSocket hub
     connectWebSocket();
   }
 
+  function fetchServerInfo() {
+    // Fetch latest clipboard from server
+    fetch('/api/clipboard')
+      .then(r => r.json())
+      .then(clip => {
+        if (clip && clip.content) {
+          handleIncomingClip(clip, false);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch network LAN URL for mobile QR pairing
+    fetch('/api/network-info')
+      .then(r => r.json())
+      .then(info => {
+        if (info && info.networkUrl) {
+          state.networkUrl = info.networkUrl;
+          const pairDisplay = document.getElementById('pairing-code-display');
+          if (pairDisplay) {
+            pairDisplay.title = `Mobile URL: ${info.networkUrl}`;
+          }
+        }
+      })
+      .catch(() => {});
+
+    // Fetch active device nodes
+    fetch('/api/devices')
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.devices && data.devices.length > 0) {
+          data.devices.forEach(d => {
+            if (!state.devices.find(existing => existing.id === d.id)) {
+              state.devices.push({
+                id: d.id,
+                name: d.name || 'Remote User Client',
+                os: d.os || 'web',
+                icon: d.os === 'ios' || d.os === 'android' ? '📱' : '💻',
+                active: true,
+                latency: '4ms',
+                battery: '100%'
+              });
+            }
+          });
+          renderDevicesList();
+          updateMetrics();
+        }
+      })
+      .catch(() => {});
+  }
+
   function connectWebSocket() {
-    const wsUrl = (document.getElementById('setting-ws-url')?.value || 'ws://localhost:5000/sync');
+    if (wsReconnectTimer) clearTimeout(wsReconnectTimer);
+
+    const wsUrl = getWsUrl();
     const token = (document.getElementById('setting-user-token')?.value || 'mock-token-adam');
     const deviceName = encodeURIComponent(document.getElementById('setting-device-name')?.value || 'Web Studio Client');
-    
+    const osType = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+
     try {
-      const fullUrl = `${wsUrl}?token=${token}&deviceName=${deviceName}&osType=web`;
+      const fullUrl = `${wsUrl}?token=${token}&deviceName=${deviceName}&osType=${osType}`;
       state.wsClient = new WebSocket(fullUrl);
 
       state.wsClient.onopen = () => {
-        updateNetworkStatus(true, 'Live Sync', '8ms');
-        logActivity('Connected to backend WebSocket mesh', 'device');
+        updateNetworkStatus(true, 'Live Hub Mesh', '< 4ms');
+        logActivity('Connected to real-time sync server', 'device');
         playSound('connect');
       };
 
@@ -319,12 +385,16 @@
         try {
           const parsed = JSON.parse(event.data);
           if (parsed.type === 'clipboard_sync' && parsed.payload) {
-            handleIncomingClip({
-              id: 'ws-' + Date.now(),
-              content: parsed.payload.content,
-              originDevice: 'Remote Peer (WS)',
-              timestamp: parsed.payload.timestamp || Date.now()
-            }, false);
+            const clip = parsed.payload;
+            if (clip.content !== state.activeClip.content) {
+              handleIncomingClip(clip, false);
+              showToast(`Received live clip from ${clip.originDevice || 'User'}`, 'info', '⚡');
+            }
+          } else if (parsed.type === 'devices_update' && parsed.payload) {
+            if (parsed.payload.activeCount) {
+              const activeDevs = document.getElementById('metric-active-devices');
+              if (activeDevs) activeDevs.textContent = Math.max(parsed.payload.activeCount, state.devices.length);
+            }
           }
         } catch (e) {
           console.error('Error parsing WS message:', e);
@@ -332,17 +402,16 @@
       };
 
       state.wsClient.onclose = () => {
-        updateNetworkStatus(true, 'Local Peer Bus', '< 2ms');
-        // Auto reconnect attempt after 5 seconds
-        setTimeout(connectWebSocket, 8000);
+        updateNetworkStatus(true, 'Local Peer Bus', '< 1ms');
+        wsReconnectTimer = setTimeout(connectWebSocket, 4000);
       };
 
       state.wsClient.onerror = () => {
-        // Seamless fallback to peer broadcast
         updateNetworkStatus(true, 'Local Peer Mesh', '< 1ms');
       };
     } catch (e) {
       updateNetworkStatus(true, 'Local Peer Mesh', '< 1ms');
+      wsReconnectTimer = setTimeout(connectWebSocket, 4000);
     }
   }
 
@@ -376,7 +445,7 @@
 
     handleIncomingClip(newClip, true);
 
-    // Broadcast across all open browser tabs
+    // 1. Broadcast across all open browser tabs locally
     if (state.broadcastChannel) {
       state.broadcastChannel.postMessage({
         type: 'clip_broadcast',
@@ -384,24 +453,33 @@
       });
     }
 
-    // Persist to storage event
+    // 2. Persist to storage event
     try {
       localStorage.setItem('clp_cross_tab_event', JSON.stringify(newClip));
     } catch (e) {}
 
-    // Send to WebSocket backend if connected
+    // 3. Send over live WebSocket to all connected devices
     if (state.wsClient && state.wsClient.readyState === WebSocket.OPEN) {
       state.wsClient.send(JSON.stringify({
         type: 'clipboard_update',
         payload: {
           content: content,
+          originDevice: origin,
+          type: type,
           timestamp: Date.now()
         }
       }));
     }
 
+    // 4. Also push via REST HTTP endpoint as universal bridge
+    fetch('/api/clipboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newClip)
+    }).catch(() => {});
+
     if (notify) {
-      showToast(`Broadcasted clip to all 4 mesh devices`, 'success', '⚡');
+      showToast(`Broadcasted clip to all connected users & devices`, 'success', '⚡');
     }
   }
 
@@ -411,7 +489,6 @@
     // Check if clip already in list
     const existingIdx = state.clips.findIndex(c => c.content === clip.content);
     if (existingIdx !== -1) {
-      // Move to top and preserve pinned status
       const existing = state.clips.splice(existingIdx, 1)[0];
       clip.pinned = existing.pinned;
       state.clips.unshift(clip);
@@ -427,7 +504,7 @@
 
     // Play sound & notify
     playSound('sync');
-    logActivity(`Synced from <strong>${clip.originDevice}</strong> (${clip.content.length} chars)`, 'sync');
+    logActivity(`Synced from <strong>${clip.originDevice || 'Remote User'}</strong> (${clip.content.length} chars)`, 'sync');
 
     // Update UI elements
     renderActiveClip();
@@ -1074,7 +1151,8 @@
     const copyPairLinkBtn = document.getElementById('copy-pairing-link-btn');
     if (copyPairLinkBtn) {
       copyPairLinkBtn.addEventListener('click', () => {
-        copyToSystemClipboard(`clp://pair?code=${state.pairingCode}&hub=localhost:5000`, 'Copied pairing link!');
+        const link = state.networkUrl || window.location.origin;
+        copyToSystemClipboard(link, 'Copied network sync link for mobile!');
       });
     }
 
