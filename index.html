@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clp — Real-Time Universal Clipboard Sync & Device Hub</title>
+  <meta name="description" content="Blazing-fast, secure, cross-platform clipboard synchronization across macOS, Windows, Linux, iOS, and Android.">
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1' ry='1'/><path d='m9 14 2 2 4-4'/></svg>">
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+    
+    <!-- Top Navigation Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="brand">
+          <div class="brand-logo-wrap">
+            <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+              <path d="m9 14 2 2 4-4"/>
+            </svg>
+            <span class="brand-pulse"></span>
+          </div>
+          <div class="brand-text">
+            <span class="brand-name">Clp<span class="brand-dot">.</span>sync</span>
+            <span class="brand-badge">v2.4 Pro</span>
+          </div>
+        </div>
+
+        <!-- Live Network Status Pill -->
+        <div id="status-pill" class="status-pill status-connected" title="Real-Time Sync active">
+          <span class="status-dot"></span>
+          <span id="status-text" class="status-text">Live Sync</span>
+          <span id="status-latency" class="status-latency">12ms</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab active" data-tab="dashboard" id="tab-btn-dashboard">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-tab" data-tab="simulator" id="tab-btn-simulator">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+          <span>Device Studio</span>
+          <span class="tab-chip">Multi-Peer</span>
+        </button>
+        <button class="nav-tab" data-tab="history" id="tab-btn-history">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>History Vault</span>
+          <span id="history-count-badge" class="badge-count">0</span>
+        </button>
+        <button class="nav-tab" data-tab="security" id="tab-btn-security">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>E2EE Shield</span>
+        </button>
+      </nav>
+
+      <!-- Action Controls -->
+      <div class="header-actions">
+        <!-- Audio Synthesizer Toggle -->
+        <button id="audio-toggle-btn" class="icon-btn active" title="Toggle Sound Cues (Web Audio)">
+          <svg id="audio-icon-on" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          <svg id="audio-icon-off" class="hidden" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="1" y1="1" y2="23"/></svg>
+        </button>
+
+        <!-- QR Code Pairing Button -->
+        <button id="pair-device-btn" class="action-btn action-btn-secondary" title="Pair new phone or desktop via QR">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+          <span>Pair Device</span>
+        </button>
+
+        <!-- User Profile / Settings -->
+        <button id="settings-btn" class="icon-btn" title="Settings & Network Configuration">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+
+        <div class="user-chip" id="current-user-chip" title="Connected as adam@clp.dev">
+          <div class="avatar">AM</div>
+          <span class="user-name">Adam</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Panels -->
+    <main class="main-content">
+
+      <!-- ==================== 1. DASHBOARD TAB ==================== -->
+      <section id="panel-dashboard" class="tab-panel active">
+        
+        <!-- Top Quick Metrics Strip -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon-wrap violet">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">Active Clips Synced</span>
+              <span class="metric-value" id="metric-total-clips">14</span>
+            </div>
+            <div class="metric-trend up">+3 today</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-wrap cyan">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">Active Devices</span>
+              <span class="metric-value" id="metric-active-devices">4</span>
+            </div>
+            <div class="metric-status-tag">Mesh Connected</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-wrap emerald">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">Sync Latency</span>
+              <span class="metric-value" id="metric-avg-latency">8 ms</span>
+            </div>
+            <div class="metric-trend instant">Instantaneous</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon-wrap amber">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="metric-info">
+              <span class="metric-label">Security Protocol</span>
+              <span class="metric-value" id="metric-encryption-status">AES-256</span>
+            </div>
+            <div class="metric-status-tag secure">Zero-Knowledge</div>
+          </div>
+        </div>
+
+        <!-- Dashboard Two-Column Workspace -->
+        <div class="dashboard-workspace">
+
+          <!-- Left Column: Push & Live Clipboard Hub -->
+          <div class="workspace-col workspace-left">
+            
+            <!-- Quick Push Card -->
+            <div class="glass-card push-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <span>Broadcast New Clip</span>
+                </div>
+                <div class="header-chip-group">
+                  <span id="detected-type-chip" class="type-chip">Plain Text</span>
+                  <label class="toggle-switch-label" title="Automatically detect system clipboard changes">
+                    <input type="checkbox" id="auto-paste-toggle" checked>
+                    <span class="toggle-switch-slider"></span>
+                    <span class="toggle-switch-text">Auto-Sync System</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="card-body">
+                <div class="textarea-wrapper">
+                  <textarea 
+                    id="clip-input" 
+                    placeholder="Paste or type anything here to immediately broadcast to your phone, tablet, and desktops... (Press Ctrl+Enter to push)"
+                    rows="5"
+                  ></textarea>
+                  
+                  <!-- Color Swatch / Media Preview overlay if detected -->
+                  <div id="inline-preview-box" class="inline-preview-box hidden"></div>
+                </div>
+
+                <div class="push-actions-bar">
+                  <div class="action-buttons-left">
+                    <button id="read-sys-clipboard-btn" class="pill-btn pill-btn-ghost" title="Read system clipboard right now">
+                      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                      <span>Grab System Clipboard</span>
+                    </button>
+                    <button id="clear-input-btn" class="pill-btn pill-btn-ghost" title="Clear input">
+                      <span>Clear</span>
+                    </button>
+                  </div>
+
+                  <div class="action-buttons-right">
+                    <span class="char-counter" id="input-char-counter">0 chars</span>
+                    <button id="push-clip-btn" class="action-btn action-btn-primary">
+                      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                      <span>Broadcast Clip</span>
+                      <kbd>Ctrl+Enter</kbd>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Current Active Universal Clip Card -->
+            <div class="glass-card active-clip-hero">
+              <div class="card-header">
+                <div class="card-title">
+                  <div class="live-dot-pulse"></div>
+                  <span>Universal Active Clip</span>
+                </div>
+                <div class="clip-meta-tags">
+                  <span id="active-clip-origin" class="badge-origin">💻 MacBook Pro 16"</span>
+                  <span id="active-clip-time" class="badge-time">Just now</span>
+                </div>
+              </div>
+
+              <div class="active-clip-display" id="active-clip-container">
+                <div class="clip-content-box" id="active-clip-content">
+                  <code>https://github.com/DocHoax/clp-universal-sync</code>
+                </div>
+              </div>
+
+              <div class="active-clip-footer">
+                <div class="clip-specs">
+                  <span id="active-clip-length">48 chars</span>
+                  <span class="dot-separator">•</span>
+                  <span id="active-clip-type">URL / Link</span>
+                  <span class="dot-separator">•</span>
+                  <span id="active-clip-hash">AES SHA-256 Verified</span>
+                </div>
+
+                <div class="clip-cta-buttons">
+                  <button id="copy-active-btn" class="action-btn action-btn-accent">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span>Copy to System</span>
+                  </button>
+                  <button id="star-active-btn" class="icon-btn" title="Pin to favorites">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </button>
+                  <button id="qr-active-btn" class="icon-btn" title="Show QR for phone scan">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Connected Mesh & Live Activity Stream -->
+          <div class="workspace-col workspace-right">
+            
+            <!-- Connected Devices Mesh Card -->
+            <div class="glass-card devices-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="9" x2="19" y2="7"/><line x1="12" y1="15" x2="5" y2="17"/><line x1="9" y1="12" x2="5" y2="7"/><line x1="15" y1="12" x2="19" y2="17"/></svg>
+                  <span>Connected Mesh Nodes</span>
+                </div>
+                <button id="add-sim-device-btn" class="pill-btn pill-btn-primary" title="Add virtual device node">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Add Node</span>
+                </button>
+              </div>
+
+              <div class="card-body no-pad">
+                <div class="device-list" id="connected-devices-list">
+                  <!-- Injected via app.js -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Real-Time Activity / Event Log -->
+            <div class="glass-card activity-card">
+              <div class="card-header">
+                <div class="card-title">
+                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                  <span>Live Sync Stream</span>
+                </div>
+                <button id="clear-stream-btn" class="pill-btn pill-btn-ghost" style="padding: 2px 8px; font-size: 11px;">Clear</button>
+              </div>
+              <div class="stream-log-body" id="sync-activity-stream">
+                <!-- Injected via app.js -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================== 2. MULTI-DEVICE SIMULATOR TAB ==================== -->
+      <section id="panel-simulator" class="tab-panel">
+        
+        <div class="simulator-intro-header">
+          <div class="intro-text">
+            <h2>Multi-Device Live Sync Studio</h2>
+            <p>Experience real-time instant synchronization across virtual devices. Copy text or code on any device mockup and watch it broadcast automatically to every other device in under 15ms.</p>
+          </div>
+          <div class="simulator-actions">
+            <button id="sim-random-data-btn" class="action-btn action-btn-secondary">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>Simulate Sample Clip</span>
+            </button>
+            <button id="sim-send-all-btn" class="action-btn action-btn-primary">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Trigger Mesh Broadcast</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Devices Studio Grid -->
+        <div class="simulator-grid">
+
+          <!-- Device 1: MacBook Pro (macOS) -->
+          <div class="sim-device macbook-frame" data-device-id="dev-macbook">
+            <div class="frame-window-bar">
+              <div class="mac-buttons">
+                <span class="mac-btn close"></span>
+                <span class="mac-btn min"></span>
+                <span class="mac-btn max"></span>
+              </div>
+              <div class="frame-title">💻 MacBook Pro 16" (macOS Tahoe)</div>
+              <div class="frame-status"><span class="pulse-dot"></span> Synced</div>
+            </div>
+            <div class="device-screen">
+              <div class="device-screen-header">
+                <span class="device-app-name">Clp for macOS</span>
+                <span class="battery-level">🔋 92%</span>
+              </div>
+              <div class="device-clipboard-state">
+                <div class="clipboard-label">CURRENT SYSTEM CLIPBOARD</div>
+                <textarea class="sim-textarea" placeholder="Type here on Mac..."></textarea>
+              </div>
+              <div class="device-actions-row">
+                <button class="sim-btn sim-copy-btn">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <span>Cmd + C (Sync)</span>
+                </button>
+                <button class="sim-btn sim-paste-btn">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                  <span>Cmd + V</span>
+                </button>
+              </div>
+              <div class="sim-device-notification hidden">
+                <span class="sim-notif-text">📥 Synced from iPhone</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 2: iPhone 16 Pro (iOS) -->
+          <div class="sim-device iphone-frame" data-device-id="dev-iphone">
+            <div class="iphone-island">
+              <div class="island-camera"></div>
+            </div>
+            <div class="device-screen phone-screen">
+              <div class="iphone-status-bar">
+                <span class="phone-time">09:41</span>
+                <div class="phone-icons">
+                  <span>5G</span>
+                  <span>📶</span>
+                  <span>🔋 88%</span>
+                </div>
+              </div>
+              <div class="phone-content-body">
+                <div class="phone-app-bar">
+                  <div class="phone-app-logo">Clp</div>
+                  <span class="phone-pill-status">Active</span>
+                </div>
+                <div class="clipboard-label">TAP TO PASTE OR TYPE</div>
+                <textarea class="sim-textarea phone-textarea" placeholder="Type on iPhone..."></textarea>
+                <div class="phone-touch-row">
+                  <button class="sim-btn sim-copy-btn phone-btn">
+                    <span>Copy & Broadcast</span>
+                  </button>
+                  <button class="sim-btn sim-paste-btn phone-btn">
+                    <span>Paste</span>
+                  </button>
+                </div>
+              </div>
+              <div class="iphone-home-bar"></div>
+              <div class="sim-device-notification hidden">
+                <span class="sim-notif-text">📥 Synced from Mac</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 3: Windows 11 PC -->
+          <div class="sim-device windows-frame" data-device-id="dev-windows">
+            <div class="frame-window-bar win-bar">
+              <div class="win-icon">🪟</div>
+              <div class="frame-title">🖥️ Alienware 38" (Windows 11)</div>
+              <div class="win-buttons">
+                <span>—</span>
+                <span>□</span>
+                <span class="win-close">✕</span>
+              </div>
+            </div>
+            <div class="device-screen">
+              <div class="device-screen-header">
+                <span class="device-app-name">Clp Tray Service v2.4</span>
+                <span class="battery-level">⚡ AC Power</span>
+              </div>
+              <div class="device-clipboard-state">
+                <div class="clipboard-label">WINDOWS CLIPBOARD HISTORY</div>
+                <textarea class="sim-textarea" placeholder="Type on Windows PC..."></textarea>
+              </div>
+              <div class="device-actions-row">
+                <button class="sim-btn sim-copy-btn">
+                  <span>Ctrl + C (Sync)</span>
+                </button>
+                <button class="sim-btn sim-paste-btn">
+                  <span>Ctrl + V</span>
+                </button>
+              </div>
+              <div class="sim-device-notification hidden">
+                <span class="sim-notif-text">📥 Synced from iPhone</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Device 4: Ubuntu Linux Workstation -->
+          <div class="sim-device linux-frame" data-device-id="dev-linux">
+            <div class="frame-window-bar linux-bar">
+              <div class="linux-dots">
+                <span class="linux-dot"></span>
+                <span class="linux-dot"></span>
+              </div>
+              <div class="frame-title">🐧 ThinkPad X1 (Ubuntu 24.04)</div>
+              <div class="frame-status"><span class="pulse-dot"></span> CLI Daemon</div>
+            </div>
+            <div class="device-screen terminal-theme">
+              <div class="device-screen-header terminal-header">
+                <span class="device-app-name">user@thinkpad:~$ clp-daemon</span>
+                <span class="battery-level">🔋 76%</span>
+              </div>
+              <div class="device-clipboard-state">
+                <div class="clipboard-label terminal-label">$ xclip -selection clipboard</div>
+                <textarea class="sim-textarea terminal-textarea" placeholder="root@sync:~# "></textarea>
+              </div>
+              <div class="device-actions-row">
+                <button class="sim-btn sim-copy-btn term-btn">
+                  <span>Ctrl+Shift+C</span>
+                </button>
+                <button class="sim-btn sim-paste-btn term-btn">
+                  <span>Ctrl+Shift+V</span>
+                </button>
+              </div>
+              <div class="sim-device-notification hidden">
+                <span class="sim-notif-text">📥 Synced from Mac</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==================== 3. HISTORY VAULT TAB ==================== -->
+      <section id="panel-history" class="tab-panel">
+        
+        <div class="history-controls-bar">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+            <input type="text" id="history-search-input" placeholder="Search clips by text, code, color, or origin device...">
+          </div>
+
+          <!-- Filter Category Pills -->
+          <div class="filter-pills" id="history-filter-pills">
+            <button class="filter-pill active" data-filter="all">All (<span id="filter-count-all">0</span>)</button>
+            <button class="filter-pill" data-filter="pinned">⭐ Starred (<span id="filter-count-pinned">0</span>)</button>
+            <button class="filter-pill" data-filter="link">🔗 Links (<span id="filter-count-link">0</span>)</button>
+            <button class="filter-pill" data-filter="code">💻 Code (<span id="filter-count-code">0</span>)</button>
+            <button class="filter-pill" data-filter="color">🎨 Colors (<span id="filter-count-color">0</span>)</button>
+            <button class="filter-pill" data-filter="json">📦 JSON (<span id="filter-count-json">0</span>)</button>
+            <button class="filter-pill" data-filter="text">📝 Plain Text (<span id="filter-count-text">0</span>)</button>
+          </div>
+
+          <div class="history-actions-bar">
+            <button id="export-history-btn" class="pill-btn pill-btn-ghost" title="Export clips as JSON">
+              <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              <span>Export</span>
+            </button>
+            <button id="clear-all-history-btn" class="pill-btn pill-btn-danger" title="Clear all history">
+              <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Clear History</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- History Items Grid / List -->
+        <div class="history-cards-grid" id="history-cards-container">
+          <!-- Injected via app.js -->
+        </div>
+
+      </section>
+
+
+      <!-- ==================== 4. SECURITY & E2EE TAB ==================== -->
+      <section id="panel-security" class="tab-panel">
+        
+        <div class="security-hero-banner">
+          <div class="shield-badge-wrap">
+            <svg class="shield-svg" viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.8" fill="none">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="security-banner-info">
+            <h2>Zero-Knowledge Client-Side Encryption</h2>
+            <p>Your clipboard content is encrypted in your browser using <strong>AES-GCM-256</strong> before it ever touches WebSocket transport or local storage. Only devices possessing your shared passphrase can decrypt payloads.</p>
+          </div>
+        </div>
+
+        <div class="security-grid">
+
+          <!-- E2EE Configuration Card -->
+          <div class="glass-card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Encryption Passphrase & Key</span>
+              </div>
+              <span id="e2ee-status-badge" class="badge-status-encrypted">E2EE ACTIVE</span>
+            </div>
+
+            <div class="card-body">
+              <div class="form-group">
+                <label for="e2ee-passphrase-input">Master Passphrase (PBKDF2 Derived)</label>
+                <div class="input-with-action">
+                  <input type="password" id="e2ee-passphrase-input" value="clp-super-secure-mesh-key-2026">
+                  <button id="toggle-passphrase-visibility" class="icon-btn" style="border:none;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <small class="form-hint">Must match identically across all your connected devices.</small>
+              </div>
+
+              <div class="form-group">
+                <label>Cryptographic Fingerprint (SHA-256)</label>
+                <div class="crypto-hash-box" id="crypto-fingerprint">
+                  4f8a:92bc:e019:aa31:67d8:2f40:91ee:bc42
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="toggle-switch-label">
+                  <input type="checkbox" id="e2ee-enabled-toggle" checked>
+                  <span class="toggle-switch-slider"></span>
+                  <span class="toggle-switch-text">Enable End-to-End Encryption for all outgoing payloads</span>
+                </label>
+              </div>
+
+              <button id="save-e2ee-key-btn" class="action-btn action-btn-primary" style="margin-top: 15px;">
+                <span>Update Cryptographic Keys</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Encryption Testbed Card -->
+          <div class="glass-card">
+            <div class="card-header">
+              <div class="card-title">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                <span>Live Cipher Inspector</span>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="cipher-stage">
+                <span class="stage-label">Plaintext Source</span>
+                <input type="text" id="cipher-sample-plain" value="Secret password token: sk-live-99238129">
+              </div>
+
+              <div class="cipher-arrow">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" x2="12" y1="5" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                <span>AES-GCM (IV + AuthTag + Ciphertext)</span>
+              </div>
+
+              <div class="cipher-stage">
+                <span class="stage-label">Encrypted WebSocket Payload (Wire Data)</span>
+                <div class="cipher-output-box" id="cipher-wire-output">
+                  eyJpdiI6InhBOFlhdz09IiwiY3BoIjoiT1IzeVFXQjVqL2t2Y0JtY0RWRW40U0N6U2Z6bWdMdjBhVTc3In0=
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Bottom System Status Bar -->
+    <footer class="system-bar">
+      <div class="system-bar-left">
+        <span class="node-indicator"><span class="dot-green"></span> Node: Local Web Studio</span>
+        <span class="sep">|</span>
+        <span id="backend-status-info">Backend: Ready (WebSocket & Peer Bus active)</span>
+      </div>
+      <div class="system-bar-right">
+        <span class="shortcut-tip"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> Broadcast</span>
+        <span class="shortcut-tip"><kbd>Alt</kbd> + <kbd>C</kbd> Copy Active</span>
+        <span class="shortcut-tip"><kbd>Esc</kbd> Dismiss</span>
+      </div>
+    </footer>
+
+  </div>
+
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Device Pairing QR Code Modal -->
+  <div id="qr-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Pair a New Device</h3>
+        <button class="icon-btn modal-close-btn" id="close-qr-modal-btn">✕</button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="modal-subtext">Scan this QR code with the Clp mobile app or point your camera at it to instantly pair your phone to this clipboard mesh.</p>
+        
+        <div class="qr-code-wrapper">
+          <canvas id="qr-canvas" width="200" height="200"></canvas>
+          <div class="qr-scan-line"></div>
+        </div>
+
+        <div class="pairing-code-box">
+          <span class="code-label">PAIRING CODE</span>
+          <span class="code-value" id="pairing-code-display">CLP-9482-SYNC</span>
+          <button id="copy-pairing-link-btn" class="pill-btn pill-btn-ghost">Copy Link</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Settings Modal -->
+  <div id="settings-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Clp Hub Settings</h3>
+        <button class="icon-btn modal-close-btn" id="close-settings-modal-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="setting-ws-url">WebSocket Sync Server URL</label>
+          <input type="text" id="setting-ws-url" value="ws://localhost:5000/sync">
+          <small class="form-hint">Default is the local Express/WS backend on port 5000.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="setting-user-token">User Auth / Device Token</label>
+          <input type="text" id="setting-user-token" value="mock-token-adam">
+          <small class="form-hint">JWT session token or mock developer ID.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="setting-device-name">Current Device Name</label>
+          <input type="text" id="setting-device-name" value="Web Studio Client">
+        </div>
+
+        <div class="form-group">
+          <label class="toggle-switch-label">
+            <input type="checkbox" id="setting-auto-clipboard-read" checked>
+            <span class="toggle-switch-slider"></span>
+            <span class="toggle-switch-text">Poll system clipboard on window focus</span>
+          </label>
+        </div>
+
+        <button id="save-settings-btn" class="action-btn action-btn-primary" style="width: 100%; margin-top: 15px;">
+          Save & Apply Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Add Simulated Device Modal -->
+  <div id="add-device-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Add Mesh Device Node</h3>
+        <button class="icon-btn modal-close-btn" id="close-add-device-modal-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="new-device-name">Device Name</label>
+          <input type="text" id="new-device-name" placeholder="e.g. iPad Pro M4, Galaxy S24 Ultra">
+        </div>
+        <div class="form-group">
+          <label for="new-device-os">Operating System</label>
+          <select id="new-device-os" class="custom-select">
+            <option value="macos">Apple macOS</option>
+            <option value="ios">Apple iOS</option>
+            <option value="windows">Microsoft Windows 11</option>
+            <option value="android">Google Android</option>
+            <option value="linux">Linux / Ubuntu</option>
+          </select>
+        </div>
+        <button id="confirm-add-device-btn" class="action-btn action-btn-primary" style="width: 100%; margin-top: 15px;">
+          Connect Node to Mesh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

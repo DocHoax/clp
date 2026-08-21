@@ -49,48 +49,25 @@ clp/
 └── package.json       # Root configuration
 ```
 
-## 🚀 Getting Started
+## 🌐 Interactive Web Studio & Multi-Device Hub
+The project now includes an **Interactive Web Studio** with a cyberpunk glassmorphic UI, live multi-device simulation, system clipboard synchronization, E2EE vault, and QR device pairing.
 
-### Prerequisites
-- Node.js (v18+)
-- bun (v1.0+)
-- MongoDB (local or cloud)
-- Android Studio or Xcode (for mobile development)
-
-### Installation
+### Launching the Web Interface:
 ```bash
-bun install
+# Start the lightweight studio server (port 3000)
+python serve.py
+
+# Or open in browser directly
+python serve.py --open
 ```
 
-### Mobile App
-```bash
-cd apps/mobile
-bun run dev
-```
-
-### Desktop App
-```bash
-cd apps/desktop
-bun run dev
-```
-
-### API
-```bash
-cd packages/api
-bun run dev
-```
-
-## 🔌 Configuration
-Create a `.env` file in each app directory with the following variables:
-
-```env
-# API
-MONGODB_URI=your_mongo_connection_string
-JWT_SECRET=your_secret
-
-# Mobile
-API_URL=http://localhost:3000
-```
+### Key Capabilities:
+- ⚡ **Universal Real-Time Mesh:** Instant transfer across browser tabs, simulated devices, and WebSocket backends (< 15ms latency).
+- 💻 **Multi-Device Simulation Studio:** Interactive device frames (MacBook Pro, iPhone 16 Pro, Alienware PC, ThinkPad Linux) for instant cross-device copy/paste demonstrations.
+- 🗄️ **Clipboard History Vault:** Tag-based categorization (URLs, Code, JSON, Colors, Plain Text), search, pinning, and JSON backup export.
+- 🔒 **Zero-Knowledge E2EE:** Client-side AES-GCM 256 encryption with PBKDF2 passphrase key derivation.
+- 📱 **QR Code Device Pairing:** Generate scannable pairing QR codes to easily connect mobile devices to your mesh.
+- 🔊 **Web Audio Synthesizer:** Real-time futuristic sound feedback for copy, sync, and pairing events.
 
 ## 🔐 Authentication Flow
 1. **Signup:** User registers via Email, Google, or Apple
