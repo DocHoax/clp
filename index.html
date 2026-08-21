@@ -88,9 +88,17 @@
           <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
 
-        <div class="user-chip" id="current-user-chip" title="Connected as adam@clp.dev">
-          <div class="avatar">AM</div>
-          <span class="user-name">Adam</span>
+        <!-- Auth Button (when logged out) -->
+        <button id="auth-trigger-btn" class="action-btn action-btn-primary hidden">
+          <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Sign In / Up</span>
+        </button>
+
+        <!-- User Chip (when logged in) -->
+        <div class="user-chip" id="current-user-chip" title="Account Menu">
+          <div class="avatar" id="header-user-avatar">AM</div>
+          <span class="user-name" id="header-user-name">Adam</span>
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" style="margin-left: 2px; opacity: 0.6;"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
     </header>
@@ -707,6 +715,112 @@
         <button id="confirm-add-device-btn" class="action-btn action-btn-primary" style="width: 100%; margin-top: 15px;">
           Connect Node to Mesh
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. User Authentication Modal (Sign Up & Sign In) -->
+  <div id="auth-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-auth-signup">Create Account</button>
+          <button class="auth-tab" id="tab-auth-login">Sign In</button>
+        </div>
+        <button class="icon-btn modal-close-btn" id="close-auth-modal-btn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="auth-error-alert" class="auth-error-alert hidden"></div>
+
+        <!-- Social Tri-Option Buttons -->
+        <div class="social-auth-group">
+          <button class="social-auth-btn" id="social-google-btn" type="button">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2s.7 5.5 1.9 7.9l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"/></svg>
+            <span>Continue with Google</span>
+          </button>
+          <button class="social-auth-btn" id="social-apple-btn" type="button">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.65-.79 1.1-1.9 0.98-3-.95.04-2.1 0.63-2.77 1.42-.59.68-1.11 1.8-0.97 2.87 1.06.08 2.14-.52 2.76-1.29z"/></svg>
+            <span>Continue with Apple</span>
+          </button>
+        </div>
+
+        <div class="auth-divider">
+          <span>or continue with email</span>
+        </div>
+
+        <!-- Sign Up Form -->
+        <form id="signup-form" class="auth-form">
+          <div class="form-group">
+            <label for="signup-name">Full Name</label>
+            <input type="text" id="signup-name" placeholder="e.g. Sarah Connor" required>
+          </div>
+          <div class="form-group">
+            <label for="signup-email">Email Address</label>
+            <input type="email" id="signup-email" placeholder="sarah@example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" placeholder="At least 6 characters" required>
+          </div>
+          <button type="submit" class="action-btn action-btn-primary" style="width: 100%; margin-top: 8px;">
+            Create Clp Account
+          </button>
+        </form>
+
+        <!-- Sign In Form -->
+        <form id="login-form" class="auth-form hidden">
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="Enter your password" required>
+          </div>
+          <button type="submit" class="action-btn action-btn-primary" style="width: 100%; margin-top: 8px;">
+            Sign In to Mesh
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. User Profile / Account Menu Modal -->
+  <div id="user-profile-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>User Account</h3>
+        <button class="icon-btn modal-close-btn" id="close-profile-modal-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="profile-card-header">
+          <div class="profile-avatar" id="modal-user-avatar">AM</div>
+          <div class="profile-details">
+            <h4 id="modal-user-name">Adam Muhammad</h4>
+            <span id="modal-user-email">adam@clp.dev</span>
+            <span class="user-plan-badge">Pro Active User</span>
+          </div>
+        </div>
+
+        <div class="profile-stats-grid">
+          <div class="profile-stat-box">
+            <span class="stat-num" id="modal-user-devices-count">4</span>
+            <span class="stat-txt">Paired Devices</span>
+          </div>
+          <div class="profile-stat-box">
+            <span class="stat-num" id="modal-user-clips-count">14</span>
+            <span class="stat-txt">Clips in Cloud</span>
+          </div>
+        </div>
+
+        <div class="profile-actions-list">
+          <button id="logout-btn" class="pill-btn pill-btn-danger" style="width: 100%; justify-content: center; padding: 10px;">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            <span>Log Out of this Device</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

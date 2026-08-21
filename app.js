@@ -75,10 +75,21 @@
     wsClient: null,
     broadcastChannel: null,
     pairingCode: 'CLP-' + Math.floor(1000 + Math.random() * 9000) + '-SYNC',
-    lastCopiedText: ''
+    lastCopiedText: '',
+    currentUser: null,
+    authToken: null
   };
 
-  // Load persisted history from localStorage if available
+  // Restore authenticated session & persisted history
+  try {
+    const savedSession = localStorage.getItem('clp_auth_session');
+    if (savedSession) {
+      const parsedSession = JSON.parse(savedSession);
+      state.currentUser = parsedSession.user;
+      state.authToken = parsedSession.token;
+    }
+  } catch (e) {}
+
   try {
     const saved = localStorage.getItem('clp_saved_history');
     if (saved) {
@@ -1245,15 +1256,233 @@
       });
     }
 
+    // 10. Authentication & Account Management
+    setupAuthListeners();
+
     // Initial Renders & Setup
     initMeshChannels();
     setupSimulatorEvents();
+    renderUserAccount();
     renderActiveClip();
     renderHistoryCards();
     renderDevicesList();
     updateMetrics();
     updateCipherDemo(state.activeClip.content);
     logActivity('Clp Universal Mesh initialized & ready', 'device');
+  }
+
+  // --- USER AUTHENTICATION CONTROLLER ---
+  function renderUserAccount() {
+    const userChip = document.getElementById('current-user-chip');
+    const authTriggerBtn = document.getElementById('auth-trigger-btn');
+    const headerAvatar = document.getElementById('header-user-avatar');
+    const headerName = document.getElementById('header-user-name');
+
+    if (state.currentUser) {
+      if (userChip) userChip.classList.remove('hidden');
+      if (authTriggerBtn) authTriggerBtn.classList.add('hidden');
+      if (headerAvatar) headerAvatar.textContent = state.currentUser.initials || state.currentUser.name.substr(0, 2).toUpperCase();
+      if (headerName) headerName.textContent = state.currentUser.name.split(' ')[0];
+
+      // Update profile modal
+      const modalAvatar = document.getElementById('modal-user-avatar');
+      const modalName = document.getElementById('modal-user-name');
+      const modalEmail = document.getElementById('modal-user-email');
+      const modalClips = document.getElementById('modal-user-clips-count');
+      const modalDevs = document.getElementById('modal-user-devices-count');
+
+      if (modalAvatar) modalAvatar.textContent = state.currentUser.initials || state.currentUser.name.substr(0, 2).toUpperCase();
+      if (modalName) modalName.textContent = state.currentUser.name;
+      if (modalEmail) modalEmail.textContent = state.currentUser.email;
+      if (modalClips) modalClips.textContent = state.clips.length;
+      if (modalDevs) modalDevs.textContent = state.devices.length;
+    } else {
+      if (userChip) userChip.classList.add('hidden');
+      if (authTriggerBtn) authTriggerBtn.classList.remove('hidden');
+    }
+  }
+
+  function setupAuthListeners() {
+    const authModal = document.getElementById('auth-modal');
+    const profileModal = document.getElementById('user-profile-modal');
+    const authTriggerBtn = document.getElementById('auth-trigger-btn');
+    const userChip = document.getElementById('current-user-chip');
+    const closeAuthBtn = document.getElementById('close-auth-modal-btn');
+    const closeProfileBtn = document.getElementById('close-profile-modal-btn');
+    const tabSignup = document.getElementById('tab-auth-signup');
+    const tabLogin = document.getElementById('tab-auth-login');
+    const signupForm = document.getElementById('signup-form');
+    const loginForm = document.getElementById('login-form');
+    const authError = document.getElementById('auth-error-alert');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Open Auth Modal
+    if (authTriggerBtn) {
+      authTriggerBtn.addEventListener('click', () => {
+        if (authError) authError.classList.add('hidden');
+        if (authModal) authModal.classList.remove('hidden');
+      });
+    }
+
+    // Open User Profile Menu
+    if (userChip) {
+      userChip.addEventListener('click', () => {
+        renderUserAccount();
+        if (profileModal) profileModal.classList.remove('hidden');
+      });
+    }
+
+    if (closeAuthBtn && authModal) {
+      closeAuthBtn.addEventListener('click', () => authModal.classList.add('hidden'));
+    }
+    if (closeProfileBtn && profileModal) {
+      closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
+    }
+
+    // Tabs: Sign Up / Sign In
+    if (tabSignup && tabLogin) {
+      tabSignup.addEventListener('click', () => {
+        tabSignup.classList.add('active');
+        tabLogin.classList.remove('active');
+        if (signupForm) signupForm.classList.remove('hidden');
+        if (loginForm) loginForm.classList.add('hidden');
+        if (authError) authError.classList.add('hidden');
+      });
+
+      tabLogin.addEventListener('click', () => {
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+        if (signupForm) signupForm.classList.add('hidden');
+        if (loginForm) loginForm.classList.remove('hidden');
+        if (authError) authError.classList.add('hidden');
+      });
+    }
+
+    // Handle Sign Up Form Submit
+    if (signupForm) {
+      signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('signup-name')?.value.trim();
+        const email = document.getElementById('signup-email')?.value.trim();
+        const password = document.getElementById('signup-password')?.value;
+
+        try {
+          const resp = await fetch('/api/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password })
+          });
+          const data = await resp.json();
+
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to create account');
+          }
+
+          // Success: save session
+          state.currentUser = data.user;
+          state.authToken = data.token;
+          localStorage.setItem('clp_auth_session', JSON.stringify({ user: data.user, token: data.token }));
+
+          renderUserAccount();
+          authModal.classList.add('hidden');
+          playSound('connect');
+          showToast(`Welcome to Clp, ${data.user.name.split(' ')[0]}! Account created.`, 'success', '🎉');
+          logActivity(`Signed up as <strong>${data.user.name}</strong> (${data.user.email})`, 'device');
+
+          // Reconnect WebSocket with new user token
+          connectWebSocket();
+
+        } catch (err) {
+          if (authError) {
+            authError.textContent = err.message;
+            authError.classList.remove('hidden');
+          }
+        }
+      });
+    }
+
+    // Handle Log In Form Submit
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email')?.value.trim();
+        const password = document.getElementById('login-password')?.value;
+
+        try {
+          const resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await resp.json();
+
+          if (!data.success) {
+            throw new Error(data.error || 'Invalid credentials');
+          }
+
+          // Success: save session
+          state.currentUser = data.user;
+          state.authToken = data.token;
+          localStorage.setItem('clp_auth_session', JSON.stringify({ user: data.user, token: data.token }));
+
+          renderUserAccount();
+          authModal.classList.add('hidden');
+          playSound('connect');
+          showToast(`Welcome back, ${data.user.name.split(' ')[0]}!`, 'success', '👋');
+          logActivity(`Signed in as <strong>${data.user.name}</strong>`, 'device');
+
+          // Reconnect WebSocket with new user token
+          connectWebSocket();
+
+        } catch (err) {
+          if (authError) {
+            authError.textContent = err.message;
+            authError.classList.remove('hidden');
+          }
+        }
+      });
+    }
+
+    // Social buttons demo
+    const socialGoogle = document.getElementById('social-google-btn');
+    const socialApple = document.getElementById('social-apple-btn');
+    const handleSocialAuth = (provider) => {
+      const demoUser = {
+        id: `usr-${provider}-${Date.now().toString().slice(-4)}`,
+        name: `${provider === 'google' ? 'Google' : 'Apple'} User`,
+        email: `user@${provider === 'google' ? 'gmail.com' : 'icloud.com'}`,
+        initials: provider === 'google' ? 'GU' : 'AU'
+      };
+      const token = `clp_tok_${demoUser.id}_demo`;
+      state.currentUser = demoUser;
+      state.authToken = token;
+      localStorage.setItem('clp_auth_session', JSON.stringify({ user: demoUser, token }));
+      renderUserAccount();
+      if (authModal) authModal.classList.add('hidden');
+      playSound('connect');
+      showToast(`Signed in with ${provider === 'google' ? 'Google' : 'Apple'}`, 'success', '✓');
+      connectWebSocket();
+    };
+
+    if (socialGoogle) socialGoogle.addEventListener('click', () => handleSocialAuth('google'));
+    if (socialApple) socialApple.addEventListener('click', () => handleSocialAuth('apple'));
+
+    // Handle Log Out
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) {}
+        state.currentUser = null;
+        state.authToken = null;
+        localStorage.removeItem('clp_auth_session');
+        renderUserAccount();
+        if (profileModal) profileModal.classList.add('hidden');
+        playSound('delete');
+        showToast('Logged out of Clp', 'info');
+        connectWebSocket();
+      });
+    }
   }
 
   function openQRModal(code) {

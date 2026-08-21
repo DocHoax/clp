@@ -1,0 +1,28 @@
+{
+  "users": {
+    "usr-adam": {
+      "id": "usr-adam",
+      "name": "Adam Muhammad",
+      "email": "adam@clp.dev",
+      "password_hash": "96af359231355235a271955a7533f6abaf8f17f07992a53ab89d6db5a79e7308",
+      "salt": "c48174d666c31fe20c8dbe3349f5dbf6",
+      "created_at": 1787353045344
+    },
+    "usr-1787353198739": {
+      "id": "usr-1787353198739",
+      "name": "Elena Rostova",
+      "email": "elena@example.com",
+      "password_hash": "9c3c6bc46127178a11f8f14752e11afa37a8a4c3707a27d84e856a8a0c22e10c",
+      "salt": "868540acc03fa57aa78efe7f7e605297",
+      "created_at": 1787353198919
+    },
+    "usr-1787353444687": {
+      "id": "usr-1787353444687",
+      "name": "Amara Williams",
+      "email": "amara@test.com",
+      "password_hash": "e0f64719db67e676f59380d43a73df67aa18238d4b3c41181481cee9336a0874",
+      "salt": "ff74e54f655a057fc8966426d2cfa7f5",
+      "created_at": 1787353444914
+    }
+  }
+}
